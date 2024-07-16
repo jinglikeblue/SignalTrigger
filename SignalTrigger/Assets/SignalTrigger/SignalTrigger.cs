@@ -133,7 +133,7 @@ namespace Jing
         }
 
         /// <summary>
-        /// 检查信号
+        /// 检查信号，被观察的信号，如果有改变，则会触发回调
         /// </summary>
         public void CheckSignals()
         {
