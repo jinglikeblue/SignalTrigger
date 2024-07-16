@@ -15,6 +15,9 @@ namespace Jing
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
         public class ConditionAttribute : Attribute
         {
+            /// <summary>
+            /// 信号名称
+            /// </summary>
             public string SignalName { get; }
 
             public ConditionAttribute(string signalName)

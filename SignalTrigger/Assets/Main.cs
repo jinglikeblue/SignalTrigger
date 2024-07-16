@@ -20,6 +20,7 @@ public class Main : MonoBehaviour
 
     private void OnSignalSwitched(string signalName, bool state)
     {
+        Debug.Log($"信号触发: [{signalName}]({state})");
         if ("A" == signalName)
         {
             text.SetActive(state);
