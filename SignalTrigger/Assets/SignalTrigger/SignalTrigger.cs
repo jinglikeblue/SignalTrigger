@@ -1,9 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 
 namespace Jing
 {
+    /// <summary>
+    /// 信号切换的委托事件
+    /// </summary>
+    public delegate void SignalSwitchedEvent(string signalName, bool isOn);
+    
     /// <summary>
     /// 信号触发器
     /// </summary>
@@ -25,11 +31,6 @@ namespace Jing
                 SignalName = signalName;
             }
         }
-
-        /// <summary>
-        /// 信号切换的委托事件
-        /// </summary>
-        public delegate void SignalSwitchedEvent(string signalName, bool isOn);
 
         /// <summary>
         /// 信号触发检查方法
@@ -96,7 +97,7 @@ namespace Jing
             {
                 _triggerCheckMethodInfoDict.Add(signalName, new HashSet<MethodInfo>());
             }
-
+            
             _triggerCheckMethodInfoDict[signalName].Add(mi);
         }
 
@@ -105,7 +106,8 @@ namespace Jing
         /// </summary>
         /// <param name="signalName"></param>
         /// <param name="onSignalSwitched"></param>
-        public void Watch(string signalName, SignalSwitchedEvent onSignalSwitched)
+        /// <param name="isSyncImmediately">是否立刻对信号进行一次同步</param>
+        public void Watch(string signalName, SignalSwitchedEvent onSignalSwitched, bool isSyncImmediately = false)
         {
             if (false == _signalWatchDict.ContainsKey(signalName))
             {
@@ -113,7 +115,13 @@ namespace Jing
             }
 
             var eventSet = _signalWatchDict[signalName];
-            eventSet.Add(onSignalSwitched);
+            var isAdded = eventSet.Add(onSignalSwitched);
+            
+            if (isSyncImmediately)
+            {
+                bool signalValue = GetSignalValue(signalName);
+                onSignalSwitched?.Invoke(signalName, signalValue);
+            }
         }
 
         /// <summary>
@@ -130,6 +138,10 @@ namespace Jing
 
             var eventSet = _signalWatchDict[signalName];
             eventSet.Remove(onSignalSwitched);
+            if (0 == eventSet.Count)
+            {
+                _signalWatchDict.Remove(signalName);
+            }
         }
 
         /// <summary>
@@ -139,6 +151,13 @@ namespace Jing
         {
             foreach (var kv in _signalWatchDict)
             {
+                var eventSet = kv.Value;
+                
+                if (0 == eventSet.Count)
+                {
+                    continue;
+                }
+                
                 var signalName = kv.Key;
 
                 bool signalValue = GetSignalValue(signalName);
@@ -149,9 +168,9 @@ namespace Jing
                 }
 
                 _cachedSignalValue[signalName] = signalValue;
-
-                var eventSet = kv.Value;
-                foreach (var action in eventSet)
+               
+                //转换为数组后进行遍历，避免遍历过程中，HashSet被修改导致异常
+                foreach (var action in eventSet.ToArray())
                 {
                     action?.Invoke(signalName, signalValue);
                 }
@@ -163,15 +182,24 @@ namespace Jing
         /// </summary>
         public void SyncSignals()
         {
-            foreach (var kv in _signalWatchDict)
+            foreach (var signalName in _signalWatchDict.Keys)
             {
-                var signalName = kv.Key;
+                SyncSignal(signalName);
+            }
+        }
 
+        /// <summary>
+        /// 同步信号，指定的信号被回调一次。
+        /// </summary>
+        /// <param name="signalName">信号名称</param>
+        public void SyncSignal(string signalName)
+        {
+            if (_signalWatchDict.TryGetValue(signalName, out var eventSet))
+            {
                 bool signalValue = GetSignalValue(signalName);
 
                 _cachedSignalValue[signalName] = signalValue;
-
-                var eventSet = kv.Value;
+                
                 foreach (var action in eventSet)
                 {
                     action?.Invoke(signalName, signalValue);

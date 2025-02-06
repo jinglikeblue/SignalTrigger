@@ -13,6 +13,7 @@ public class Main : MonoBehaviour
     void Start()
     {
         st = new SignalTrigger(this.GetType().Assembly);
+        st.Watch("None", OnSignalSwitched);
         st.Unwatch("None", OnSignalSwitched);
         st.Watch("A", OnSignalSwitched);
         st.SyncSignals();
